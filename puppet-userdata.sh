@@ -147,7 +147,7 @@ function associatenode {
 function runpuppet {
     sleep $[ ( $RANDOM % $SPLAYLIMIT ) + 1]s
     $PUPPET agent --enable
-    $PUPPET agent --onetime --no-daemonize --no-usecacheonfailure --no-splay --verbose
+    $PUPPET agent --onetime --no-daemonize --no-usecacheonfailure --no-splay --verbose && true
     $PUPPET resource service puppet ensure=running enable=true
 }
 
