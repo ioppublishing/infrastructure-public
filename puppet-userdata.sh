@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # To include this script in userdata:
-# curl --retry 3 {{URL}} | /bin/bash -s
+# curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -s
 
+# To (re-)run on a node that has already had Puppet configured, first run "yum remove puppet-agent"
 
 # Inputs:
 # Env        (EC2 tag, required) - The Puppet environment to use (e.g. stage)
@@ -16,14 +17,14 @@ function get_config() {
     # NB: Where a second argument is passed to get_ec2_tag, it is the default value if the tag is not found or is blank.
 
     export ocm_server=$(get_ec2_tag ocm_server nonprodpuppet)
-    export ocm_region=$(get_ec2_tag ocm_server eu-west-1)
+    export ocm_region=$(get_ec2_tag ocm_region eu-west-1)
     export puppet_role=$(get_ec2_tag Role)
     export puppet_environment=$(get_ec2_tag Env)
     export fqdn=$(get_ec2_tag Name)
 
 
     #set global settings
-    export PUPPETSERVER=$(aws  opsworks-cm describe-servers --region=$ocm_region --query "Servers[?ServerName=='$ocm_server'].Endpoint" --output text)
+    export PUPPETSERVER=$(aws opsworks-cm describe-servers --region=$ocm_region --query "Servers[?ServerName=='$ocm_server'].Endpoint" --output text)
     export PRUBY='/opt/puppetlabs/puppet/bin/ruby'
     export PUPPET='/opt/puppetlabs/bin/puppet'
     export DAEMONSPLAY='true'
@@ -40,9 +41,9 @@ export PP_REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/l
 
 function get_ec2_tag() {
     local tag_name=${1}
-    local default_value=${2}
+    local default_value=${2:-}
 
-    local tag_value= $(aws ec2 describe-tags \
+    local tag_value=$(aws ec2 describe-tags \
         --region ${PP_REGION} \
         --filters "Name=resource-id,Values=${PP_INSTANCE_ID}" \
         --query "Tags[?Key==\`${tag_name}\`].Value" \
