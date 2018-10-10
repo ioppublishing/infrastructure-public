@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+sudo yum install -y awscli
 
 # To include this script in userdata:
 # curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -s
