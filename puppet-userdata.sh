@@ -13,6 +13,10 @@ set -euo pipefail
 # ocm_server (EC2 tag, optional) - The Opsworks Puppetmaster Name to connect to (default: nonprodpuppet)
 # ocm_region (EC2 tag, optional) - The AWS region the Opsworks Puppetmaster is in (default: eu-west-1)
 
+function prepareforaws {
+    yum install -y awscli
+}
+
 function get_config() {
     # NB: Where a second argument is passed to get_ec2_tag, it is the default value if the tag is not found or is blank.
 
@@ -57,10 +61,6 @@ function get_ec2_tag() {
         >&2 echo "ERROR: could not find required EC2 tag '${tag_name}'"
         exit 1
     fi
-}
-
-function prepareforaws {
-    yum install -y awscli
 }
 
 function loadmodel {
@@ -155,8 +155,8 @@ function runpuppet {
 }
 
 # Order of execution of functions
-get_config
 prepareforaws
+get_config
 loadmodel
 preparepuppet
 establishtrust
