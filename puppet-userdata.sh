@@ -1,6 +1,5 @@
 #!/bin/bash
 set -euo pipefail
-yum install -y awscli
 
 # To include this script in userdata:
 # curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -s
@@ -60,6 +59,9 @@ function get_ec2_tag() {
     fi
 }
 
+function prepareforaws {
+    yum install -y awscli
+}
 
 function loadmodel {
     aws configure add-model --service-model https://s3.amazonaws.com/opsworks-cm-us-east-1-prod-default-assets/misc/owpe/model-2017-09-05/opsworkscm-2016-11-01.normal.json --service-name opsworks-cm-puppet
@@ -154,6 +156,7 @@ function runpuppet {
 
 # Order of execution of functions
 get_config
+prepareforaws
 loadmodel
 preparepuppet
 establishtrust
