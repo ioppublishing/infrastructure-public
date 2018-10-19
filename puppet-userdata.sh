@@ -6,7 +6,7 @@ set -euo pipefail
 # curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -s
 #
 # From a non-AWS host:
-# wget https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) -o /tmp/puppet-userdata.sh
+# wget https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) -O /tmp/puppet-userdata.sh
 # sh /tmp/userdata.sh -s fqdn puppet_role puppet_env ocm_server ocm_region
 # Eg
 # sh /tmp/userdata.sh myhostname.mydomain.com myrole stage opsworks-puppetmaster-name eu-west-1
