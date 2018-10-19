@@ -2,22 +2,49 @@
 set -euo pipefail
 
 # To include this script in userdata:
+# From an AWS EC2 host:
 # curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -s
+#
+# From a non-AWS host:
+# wget https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) -o /tmp/puppet-userdata.sh
+# sh /tmp/userdata.sh -s fqdn puppet_role puppet_env ocm_server ocm_region
+# Eg
+# sh /tmp/userdata.sh myhostname.mydomain.com myrole stage opsworks-puppetmaster-name eu-west-1
 
 # To (re-)run on a node that has already had Puppet configured, first run "yum remove puppet-agent"
 
-# Inputs:
+# EC2 Inputs (Tags):
 # Env        (EC2 tag, required) - The Puppet environment to use (e.g. stage)
 # Role       (EC2 tag, required) - The puppet role to use (e.g. svc)
 # Name       (EC2 tag, required) - Used as the Puppet node / certificate name and 'realhostname' fact.  Should be unique, ideally a FQDN.
 # ocm_server (EC2 tag, optional) - The Opsworks Puppetmaster Name to connect to (default: nonprodpuppet)
 # ocm_region (EC2 tag, optional) - The AWS region the Opsworks Puppetmaster is in (default: eu-west-1)
 
+if [ $# -eq 0 ]; then
+    args_mode="aws"
+elif [ $# -eq 5 ]; then
+    args_mode="non-aws"
+    arg_fqdn=$1
+    arg_puppet_role=$2
+    arg_puppet_environment=$3
+    arg_ocm_server=$4
+    arg_ocm_region=$5
+else
+    echo "Error: Unknown arguments"
+    echo "For AWS EC2, run with no arguments"
+    echo "For other systems;"
+    echo "  sh /tmp/puppet-userdata.sh fqdn puppet_role puppet_env ocm_server ocm_region"
+    echo "  Eg:"
+    echo "  sh /tmp/puppet-userdata.sh myhostname.mydomain.com myrole stage opsworks-puppetmaster-name eu-west-1"
+    exit 1
+fi
+
 function prepareforaws {
     yum install -y awscli
+    export PATH=/usr/local/aws/bin:$PATH
 }
 
-function get_config() {
+function get_AWS_config() {
     # NB: Where a second argument is passed to get_ec2_tag, it is the default value if the tag is not found or is blank.
 
     export ocm_server=$(get_ec2_tag ocm_server nonprodpuppet)
@@ -26,8 +53,24 @@ function get_config() {
     export puppet_environment=$(get_ec2_tag Env)
     export fqdn=$(get_ec2_tag Name)
 
+    #set aws settings
+    export PP_INSTANCE_ID=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/instance-id)
+    export PP_IMAGE_NAME=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/ami-id)
+    export PP_REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+}
 
-    #set global settings
+function get_NonAWS_config() {
+    export ocm_server=$arg_ocm_server
+    export ocm_region=$arg_ocm_region
+    export puppet_role=$arg_puppet_role
+    export puppet_environment=$arg_puppet_environment
+    export fqdn=$arg_fqdn
+    export PP_INSTANCE_ID=
+    export PP_IMAGE_NAME=
+    export PP_REGION=$arg_ocm_region
+}
+
+function get_global_config() {
     export PUPPETSERVER=$(aws opsworks-cm describe-servers --region=$ocm_region --query "Servers[?ServerName=='$ocm_server'].Endpoint" --output text)
     export PRUBY='/opt/puppetlabs/puppet/bin/ruby'
     export PUPPET='/opt/puppetlabs/bin/puppet'
@@ -36,12 +79,29 @@ function get_config() {
     export PUPPET_CA_PATH='/etc/puppetlabs/puppet/ssl/certs/ca.pem'
 }
 
-export PATH=/usr/local/aws/bin:$PATH
-#set aws settings
-export PP_INSTANCE_ID=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/instance-id)
-export PP_IMAGE_NAME=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/ami-id)
-export PP_REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+function display_config() {
+    echo "Using fqdn               = ${fqdn}"
+    echo "Using puppet_role        = ${puppet_role}"
+    echo "Using puppet_environment = ${puppet_environment}"
+    echo "Using ocm_server         = ${ocm_server}"
+    echo "Using ocm_region         = ${ocm_region}"
+    echo "Using PUPPETSERVER       = ${PUPPETSERVER}"
+    echo "Using PP_INSTANCE_ID     = ${PP_INSTANCE_ID}"
+    echo "Using PP_IMAGE_NAME      = ${PP_IMAGE_NAME}"
+    echo "Using PP_REGION          = ${PP_REGION}"
+}
 
+function get_config() {
+    if [ $args_mode == "aws" ]; then
+        echo Using AWS settings ...
+        get_AWS_config
+    else
+        echo Using non-AWS settings ...
+        get_NonAWS_config
+    fi
+    get_global_config
+    display_config
+}
 
 function get_ec2_tag() {
     local tag_name=${1}
