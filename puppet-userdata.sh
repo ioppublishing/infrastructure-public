@@ -45,6 +45,11 @@ function prepareforaws {
 }
 
 function get_AWS_config() {
+    #set aws settings
+    export PP_INSTANCE_ID=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/instance-id)
+    export PP_IMAGE_NAME=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/ami-id)
+    export PP_REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+
     # NB: Where a second argument is passed to get_ec2_tag, it is the default value if the tag is not found or is blank.
 
     export ocm_server=$(get_ec2_tag ocm_server nonprodpuppet)
@@ -52,22 +57,18 @@ function get_AWS_config() {
     export puppet_role=$(get_ec2_tag Role)
     export puppet_environment=$(get_ec2_tag Env)
     export fqdn=$(get_ec2_tag Name)
-
-    #set aws settings
-    export PP_INSTANCE_ID=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/instance-id)
-    export PP_IMAGE_NAME=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/ami-id)
-    export PP_REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
 }
 
 function get_NonAWS_config() {
+    export PP_INSTANCE_ID=
+    export PP_IMAGE_NAME=
+    export PP_REGION=$arg_ocm_region
+
     export ocm_server=$arg_ocm_server
     export ocm_region=$arg_ocm_region
     export puppet_role=$arg_puppet_role
     export puppet_environment=$arg_puppet_environment
     export fqdn=$arg_fqdn
-    export PP_INSTANCE_ID=
-    export PP_IMAGE_NAME=
-    export PP_REGION=$arg_ocm_region
 }
 
 function get_global_config() {
