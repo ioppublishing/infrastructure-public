@@ -42,6 +42,8 @@ fi
 function prepareforaws {
     yum install -y awscli
     export PATH=/usr/local/aws/bin:$PATH
+    # Hack to get around s3-transfer bug: https://bugs.centos.org/view.php?id=15518
+    sed -i -e 's/\/lib\//\/lib64\//' /usr/lib/python2.7/site-packages/awscli/clidriver.py
 }
 
 function get_AWS_config() {
