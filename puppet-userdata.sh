@@ -43,7 +43,7 @@ function prepareforaws {
     #Hack Removed in SD-1322
     yum install -y epel-release awscli python-pip
     export PATH=/usr/local/aws/bin:$PATH
-    sudo pip install awscli --force-reinstallH
+    sudo pip install awscli --force-reinstall
 }
 
 function get_AWS_config() {
