@@ -40,10 +40,10 @@ else
 fi
 
 function prepareforaws {
-    yum install -y awscli
+    #Hack Removed in SD-1322
+    yum install -y epel-release awscli python-pip
     export PATH=/usr/local/aws/bin:$PATH
-    # Hack to get around s3-transfer bug: https://bugs.centos.org/view.php?id=15518
-    sed -i -e 's/\/lib\//\/lib64\//' /usr/lib/python2.7/site-packages/awscli/clidriver.py
+    sudo pip install awscli --force-reinstallH
 }
 
 function get_AWS_config() {
