@@ -40,10 +40,16 @@ else
 fi
 
 function prepareforaws {
-    #Hack Removed in SD-1322
     yum install -y epel-release awscli python-pip
     export PATH=/usr/local/aws/bin:$PATH
     sudo pip install awscli --force-reinstall
+    if [ $args_mode == "aws" ]; then
+        REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+        INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+        CURRENT_TAG=$(aws ec2 describe-tags --region ${REGION} --filters Name=resource-id,Values=$INSTANCE_ID Name=key,Values=Name --query Tags[].Value --output text)
+        aws ec2 create-tags --region ${REGION} --resources ${INSTANCE_ID} --tags Key=Name,Value=${CURRENT_TAG}_${INSTANCE_ID}
+        pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+    fi
 }
 
 function get_AWS_config() {
