@@ -40,7 +40,8 @@ else
 fi
 
 function prepareforaws {
-    yum install -y epel-release awscli python-pip
+    yum install -y epel-release 
+    yum install -y awscli python-pip
     export PATH=/usr/local/aws/bin:$PATH
     sudo pip install awscli --force-reinstall
     if [ $args_mode == "aws" ]; then
