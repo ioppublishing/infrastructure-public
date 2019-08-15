@@ -11,6 +11,10 @@ set -euo pipefail
 # Eg
 # sh /tmp/userdata.sh myhostname.mydomain.com myrole stage opsworks-puppetmaster-name eu-west-1
 
+# If there are problems on an AWS EC2 host: 
+# to create a debugging log in /var/log/pu.log, edit the userdata to be as follows:
+# curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -sx 2>&1 | tee -a /var/log/pu.log
+
 # To (re-)run on a node that has already had Puppet configured, first run "yum remove puppet-agent"
 
 # EC2 Inputs (Tags):
@@ -40,7 +44,8 @@ else
 fi
 
 function prepareforaws {
-    yum install -y epel-release awscli python-pip
+    yum install -y epel-release 
+    yum install -y awscli python-pip
     export PATH=/usr/local/aws/bin:$PATH
     sudo pip install awscli --force-reinstall
     if [ $args_mode == "aws" ]; then
