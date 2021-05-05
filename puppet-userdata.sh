@@ -233,7 +233,7 @@ function associatenode {
     aws opsworks-cm-puppet describe-node-association-status --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server} --query 'EngineAttributes[0].Value' --output text > ${PP_CERT_PATH}
     establishtrust
     # ridiculous change to get the CRL
-    puppet agent -t --noop|| true
+    puppet agent -t --noop || true
     ${PUPPET} bootstrap verify
 }
 
