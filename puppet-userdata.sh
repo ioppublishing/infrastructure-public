@@ -64,9 +64,15 @@ function prepareforaws {
 
 function get_AWS_config() {
     #set aws settings
-    export PP_INSTANCE_ID=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/instance-id)
-    export PP_IMAGE_NAME=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/ami-id)
-    export PP_REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+    export EC2_TOKEN=$(curl --silent --show-error --retry 3 -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+    export PP_INSTANCE_ID=$(curl --silent --show-error --retry 3 -H "X-aws-ec2-metadata-token: $EC2_TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+    # this uses the EC2 instance ID as the node name
+    export PP_IMAGE_NAME=$(curl --silent --show-error --retry 3 -H "X-aws-ec2-metadata-token: $EC2_TOKEN" http://169.254.169.254/latest/meta-data/ami-id)
+    export PP_REGION=$(curl --silent --show-error --retry 3 -H "X-aws-ec2-metadata-token: $EC2_TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+
+    export PP_INSTANCE_ID_EXTENSION='1.3.6.1.4.1.34380.1.1.2'
+    export PP_REGION_EXTENSION='1.3.6.1.4.1.34380.1.1.18'
+    export PP_IMAGE_NAME_EXTENSION='1.3.6.1.4.1.34380.1.1.3'
 
     # NB: Where a second argument is passed to get_ec2_tag, it is the default value if the tag is not found or is blank.
 
@@ -160,6 +166,11 @@ function preparepuppet {
 
 function establishtrust {
     aws opsworks-cm describe-servers --region=$ocm_region --server-name $ocm_server --query "Servers[0].EngineAttributes[?Name=='PUPPET_API_CA_CERT'].Value" --output text > /etc/puppetlabs/puppet/ssl/certs/ca.pem
+
+    aws opsworks-cm describe-servers --region=$ocm_region --server-name $ocm_server --query "Servers[0].EngineAttributes[?Name=='PUPPET_API_CRL'].Value" --output text > /etc/puppetlabs/puppet/ssl/crl.pem
+    if [ ! -s /etc/puppetlabs/puppet/ssl/crl.pem ] ; then
+        rm /etc/puppetlabs/puppet/ssl/crl.pem
+    fi
 }
 
 function installpuppet {
@@ -171,10 +182,10 @@ function installpuppet {
         | /bin/bash -s \
         agent:certname=${fqdn:?} \
         agent:splay=${DAEMONSPLAY} \
-        extension_requests:pp_instance_id=${PP_INSTANCE_ID} \
-        extension_requests:pp_region=${PP_REGION} \
-        extension_requests:pp_image_name=${PP_IMAGE_NAME} \
-        $ADD_EXTENSIONS
+        extension_requests:${PP_INSTANCE_ID_EXTENSION}=${PP_INSTANCE_ID} \
+        extension_requests:${PP_REGION_EXTENSION}=${PP_REGION} \
+        extension_requests:${PP_IMAGE_NAME_EXTENSION}=${PP_IMAGE_NAME} \
+        ${ADD_EXTENSIONS}
 
         $PUPPET resource service puppet ensure=stopped
 }
@@ -206,30 +217,30 @@ function installpuppetbootstrap {
 
 function associatenode {
     $PUPPET config set environment "${puppet_environment:?}" --section agent
-    CERTNAME=$($PUPPET config print certname --section agent)
-    SSLDIR=$($PUPPET config print ssldir --section agent)
-    PP_CSR_PATH="$SSLDIR/certificate_requests/$CERTNAME.pem"
-    PP_CERT_PATH="$SSLDIR/certs/$CERTNAME.pem"
+    CERTNAME=$(${PUPPET} config print certname --section agent)
+    SSLDIR=$(${PUPPET} config print ssldir --section agent)
+    PP_CSR_PATH="${SSLDIR}/certificate_requests/${CERTNAME}.pem"
+    PP_CERT_PATH="${SSLDIR}/certs/${CERTNAME}.pem"
 
     #clear out extraneous certs and generate a new one
-    $PUPPET bootstrap purge
-    $PUPPET bootstrap csr
+    ${PUPPET} bootstrap purge
+    ${PUPPET} bootstrap csr
 
     # submit the cert
-    ASSOCIATE_TOKEN=$(aws opsworks-cm associate-node --region $ocm_region --server-name $ocm_server --node-name $CERTNAME --engine-attributes Name=PUPPET_NODE_CSR,Value="`cat $PP_CSR_PATH`" --query "NodeAssociationStatusToken" --output text)
+    ASSOCIATE_TOKEN=$(aws opsworks-cm associate-node --region ${ocm_region} --server-name ${ocm_server} --node-name ${CERTNAME} --engine-attributes Name=PUPPET_NODE_CSR,Value="`cat $PP_CSR_PATH`" --query "NodeAssociationStatusToken" --output text)
 
     #wait
-    aws opsworks-cm wait node-associated --region $ocm_region --node-association-status-token "$ASSOCIATE_TOKEN" --server-name $ocm_server
+    aws opsworks-cm wait node-associated --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server}
     #install and verify
-    aws opsworks-cm-puppet describe-node-association-status --region $ocm_region --node-association-status-token "$ASSOCIATE_TOKEN" --server-name $ocm_server --query 'EngineAttributes[0].Value' --output text > $PP_CERT_PATH
+    aws opsworks-cm-puppet describe-node-association-status --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server} --query 'EngineAttributes[0].Value' --output text > ${PP_CERT_PATH}
 
-    $PUPPET bootstrap verify
+    ${PUPPET} bootstrap verify
 }
 
 function runpuppet {
     sleep $[ ( $RANDOM % $SPLAYLIMIT ) + 1]s
     $PUPPET agent --enable
-    $PUPPET agent --onetime --no-daemonize --no-usecacheonfailure --no-splay --verbose && true
+    $PUPPET agent --onetime --no-daemonize --no-usecacheonfailure --no-splay --verbose --show_diff
     $PUPPET resource service puppet ensure=running enable=true
 }
 
@@ -243,3 +254,5 @@ installpuppet
 installpuppetbootstrap
 associatenode
 runpuppet
+
+touch /tmp/userdata.done
