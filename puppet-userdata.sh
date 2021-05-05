@@ -248,6 +248,7 @@ prepareforaws
 get_config
 loadmodel
 preparepuppet
+establishtrust
 installpuppet
 installpuppetbootstrap
 associatenode
