@@ -225,14 +225,14 @@ function associatenode {
     #clear out extraneous certs and generate a new one
     ${PUPPET} bootstrap purge
     ${PUPPET} bootstrap csr
-
+    establishtrust
     # submit the cert
     ASSOCIATE_TOKEN=$(aws opsworks-cm associate-node --region ${ocm_region} --server-name ${ocm_server} --node-name ${CERTNAME} --engine-attributes Name=PUPPET_NODE_CSR,Value="`cat $PP_CSR_PATH`" --query "NodeAssociationStatusToken" --output text)
     #wait
     aws opsworks-cm wait node-associated --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server}
     #install and verify
     aws opsworks-cm-puppet describe-node-association-status --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server} --query 'EngineAttributes[0].Value' --output text > ${PP_CERT_PATH}
-    establishtrust
+    puppet agent -t || true
     ${PUPPET} bootstrap verify
 }
 
