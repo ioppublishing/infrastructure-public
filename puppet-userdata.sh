@@ -44,10 +44,7 @@ else
 fi
 
 function prepareforaws {
-    yum install -y epel-release 
-    yum install -y awscli python-pip
-    export PATH=/usr/local/aws/bin:$PATH
-    sudo pip install awscli --force-reinstall
+    yum install -y epel-release
     if [ $args_mode == "aws" ]; then
         REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
         INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
