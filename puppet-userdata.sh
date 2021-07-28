@@ -44,7 +44,7 @@ else
 fi
 
 function prepareforaws {
-    yum install -y epel-release
+    yum install -y epel-release awscli
     if [ $args_mode == "aws" ]; then
         REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
         INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
@@ -146,7 +146,8 @@ function get_ec2_tag() {
 }
 
 function loadmodel {
-    aws configure add-model --service-model https://s3.amazonaws.com/opsworks-cm-us-east-1-prod-default-assets/misc/owpe/model-2017-09-05/opsworkscm-2016-11-01.normal.json --service-name opsworks-cm-puppet
+    curl --silent --show-error --retry 3 https://s3.amazonaws.com/opsworks-cm-us-east-1-prod-default-assets/misc/owpe/model-2017-09-05/opsworkscm-2016-11-01.normal.json -o /root/opsworkscm-2016-11-01.normal.json
+    aws configure add-model --service-model file:///root/opsworkscm-2016-11-01.normal.json --service-name opsworks-cm-puppet
 }
 
 function preparepuppet {
