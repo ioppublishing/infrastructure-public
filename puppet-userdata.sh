@@ -44,12 +44,14 @@ else
 fi
 
 function prepareforaws {
-    yum install -y epel-release awscli
+    yum install -y epel-release 
+    yum install -y awscli
+    yum install -y python2-pip
     if [ $args_mode == "aws" ]; then
         REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
         INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
-        CURRENT_TAG=$(aws ec2 describe-tags --region ${REGION} --filters Name=resource-id,Values=${INSTANCE_ID} Name=key,Values=Name --query Tags[].Value --output text)
-        ASG_TAG=$(aws ec2 describe-tags --region ${REGION} --filters Name=resource-id,Values=${INSTANCE_ID} Name=key,Values=aws:autoscaling:groupName --query Tags[].Value --output text)
+        CURRENT_TAG=$(/bin/aws ec2 describe-tags --region ${REGION} --filters Name=resource-id,Values=${INSTANCE_ID} Name=key,Values=Name --query Tags[].Value --output text)
+        ASG_TAG=$(/bin/aws ec2 describe-tags --region ${REGION} --filters Name=resource-id,Values=${INSTANCE_ID} Name=key,Values=aws:autoscaling:groupName --query Tags[].Value --output text)
         if [[ ${ASG_TAG} != "" ]]; then
           if [[ ${CURRENT_TAG} != *${INSTANCE_ID}* ]]; then
               aws ec2 create-tags --region ${REGION} --resources ${INSTANCE_ID} --tags Key=Name,Value=${CURRENT_TAG}_${INSTANCE_ID}
@@ -93,7 +95,7 @@ function get_NonAWS_config() {
 }
 
 function get_global_config() {
-    export PUPPETSERVER=$(aws opsworks-cm describe-servers --region=$ocm_region --query "Servers[?ServerName=='$ocm_server'].Endpoint" --output text)
+    export PUPPETSERVER=$(/bin/aws opsworks-cm describe-servers --region=$ocm_region --query "Servers[?ServerName=='$ocm_server'].Endpoint" --output text)
     export PRUBY='/opt/puppetlabs/puppet/bin/ruby'
     export PUPPET='/opt/puppetlabs/bin/puppet'
     export DAEMONSPLAY='true'
@@ -129,7 +131,7 @@ function get_ec2_tag() {
     local tag_name=${1}
     local default_value=${2:-}
 
-    local tag_value=$(aws ec2 describe-tags \
+    local tag_value=$(/bin/aws ec2 describe-tags \
         --region ${PP_REGION} \
         --filters "Name=resource-id,Values=${PP_INSTANCE_ID}" \
         --query "Tags[?Key==\`${tag_name}\`].Value" \
@@ -189,7 +191,7 @@ function installpuppet {
 }
 
 function generate_csr_attributes {
-    pp_tags=$(aws ec2 describe-tags --region $PP_REGION --filters "Name=resource-id,Values=${PP_INSTANCE_ID}" --query 'Tags[?starts_with(Key, `pp_`)].[Key,Value]' --output text | sed s/\t/=/)
+    pp_tags=$(/bin/aws ec2 describe-tags --region $PP_REGION --filters "Name=resource-id,Values=${PP_INSTANCE_ID}" --query 'Tags[?starts_with(Key, `pp_`)].[Key,Value]' --output text | sed s/\t/=/)
 
     csr_attrs=""
     for i in $pp_tags
@@ -224,7 +226,7 @@ function associatenode {
     ${PUPPET} bootstrap purge
     ${PUPPET} bootstrap csr
     # submit the cert
-    ASSOCIATE_TOKEN=$(aws opsworks-cm associate-node --region ${ocm_region} --server-name ${ocm_server} --node-name ${CERTNAME} --engine-attributes Name=PUPPET_NODE_CSR,Value="`cat $PP_CSR_PATH`" --query "NodeAssociationStatusToken" --output text)
+    ASSOCIATE_TOKEN=$(/bin/aws opsworks-cm associate-node --region ${ocm_region} --server-name ${ocm_server} --node-name ${CERTNAME} --engine-attributes Name=PUPPET_NODE_CSR,Value="`cat $PP_CSR_PATH`" --query "NodeAssociationStatusToken" --output text)
     #wait
     aws opsworks-cm wait node-associated --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server}
     #install and verify
