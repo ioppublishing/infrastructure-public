@@ -149,7 +149,7 @@ function get_ec2_tag() {
 
 function loadmodel {
     curl --silent --show-error --retry 3 https://s3.amazonaws.com/opsworks-cm-us-east-1-prod-default-assets/misc/owpe/model-2017-09-05/opsworkscm-2016-11-01.normal.json -o /root/opsworkscm-2016-11-01.normal.json
-    aws configure add-model --service-model file:///root/opsworkscm-2016-11-01.normal.json --service-name opsworks-cm-puppet
+    /bin/aws configure add-model --service-model file:///root/opsworkscm-2016-11-01.normal.json --service-name opsworks-cm-puppet
 }
 
 function preparepuppet {
@@ -165,9 +165,9 @@ function preparepuppet {
 }
 
 function establishtrust {
-    aws opsworks-cm describe-servers --region=$ocm_region --server-name $ocm_server --query "Servers[0].EngineAttributes[?Name=='PUPPET_API_CA_CERT'].Value" --output text > /etc/puppetlabs/puppet/ssl/certs/ca.pem
+    /bin/aws opsworks-cm describe-servers --region=$ocm_region --server-name $ocm_server --query "Servers[0].EngineAttributes[?Name=='PUPPET_API_CA_CERT'].Value" --output text > /etc/puppetlabs/puppet/ssl/certs/ca.pem
 
-    aws opsworks-cm describe-servers --region=$ocm_region --server-name $ocm_server --query "Servers[0].EngineAttributes[?Name=='PUPPET_API_CRL'].Value" --output text > /etc/puppetlabs/puppet/ssl/crl.pem
+    /bin/aws opsworks-cm describe-servers --region=$ocm_region --server-name $ocm_server --query "Servers[0].EngineAttributes[?Name=='PUPPET_API_CRL'].Value" --output text > /etc/puppetlabs/puppet/ssl/crl.pem
     if [ ! -s /etc/puppetlabs/puppet/ssl/crl.pem ] ; then
         rm /etc/puppetlabs/puppet/ssl/crl.pem
     fi
@@ -228,9 +228,9 @@ function associatenode {
     # submit the cert
     ASSOCIATE_TOKEN=$(/bin/aws opsworks-cm associate-node --region ${ocm_region} --server-name ${ocm_server} --node-name ${CERTNAME} --engine-attributes Name=PUPPET_NODE_CSR,Value="`cat $PP_CSR_PATH`" --query "NodeAssociationStatusToken" --output text)
     #wait
-    aws opsworks-cm wait node-associated --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server}
+    /bin/aws opsworks-cm wait node-associated --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server}
     #install and verify
-    aws opsworks-cm-puppet describe-node-association-status --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server} --query 'EngineAttributes[0].Value' --output text > ${PP_CERT_PATH}
+    /bin/aws opsworks-cm-puppet describe-node-association-status --region ${ocm_region} --node-association-status-token "${ASSOCIATE_TOKEN}" --server-name ${ocm_server} --query 'EngineAttributes[0].Value' --output text > ${PP_CERT_PATH}
     establishtrust
     # ridiculous change to get the CRL
     puppet agent -t --noop || true
