@@ -11,7 +11,7 @@ set -euo pipefail
 # Eg
 # sh /tmp/userdata.sh myhostname.mydomain.com myrole stage opsworks-puppetmaster-name eu-west-1
 
-# If there are problems on an AWS EC2 host: 
+# If there are problems on an AWS EC2 host:
 # to create a debugging log in /var/log/pu.log, edit the userdata to be as follows:
 # curl --retry 3 https://raw.githubusercontent.com/ioppublishing/infrastructure-public/master/puppet-userdata.sh?$(date +%s) | /bin/bash -sx 2>&1 | tee -a /var/log/pu.log
 
@@ -44,9 +44,9 @@ else
 fi
 
 function prepareforaws {
-    yum install -y epel-release 
+    yum install -y epel-release
     yum install -y awscli
-    yum install -y python2-pip
+    yum install -y python3-pip
     if [ $args_mode == "aws" ]; then
         REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
         INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
@@ -57,7 +57,7 @@ function prepareforaws {
               aws ec2 create-tags --region ${REGION} --resources ${INSTANCE_ID} --tags Key=Name,Value=${CURRENT_TAG}_${INSTANCE_ID}
           fi
         fi
-        pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+        pip3 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz
     fi
 }
 
