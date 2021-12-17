@@ -46,7 +46,6 @@ fi
 function prepareforaws {
     yum install -y epel-release
     yum install -y awscli
-    yum install -y python2-pip
     yum install -y python3-pip
     if [ $args_mode == "aws" ]; then
         REGION=$(curl --silent --show-error --retry 3 http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
