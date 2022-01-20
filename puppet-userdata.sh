@@ -253,6 +253,6 @@ establishtrust
 installpuppet
 installpuppetbootstrap
 associatenode
-#runpuppet
+runpuppet
 
 touch /tmp/userdata.done
