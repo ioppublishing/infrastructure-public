@@ -239,6 +239,8 @@ function associatenode {
 
 function runpuppet {
     sleep $[ ( $RANDOM % $SPLAYLIMIT ) + 1]s
+    echo 1 > /proc/sys/net/netfilter/nf_conntrack_helper
+    echo "net.netfilter.nf_conntrack_helper=1" >> /etc/sysctl.conf
     cat /proc/sys/net/netfilter/nf_conntrack_helper >> /tmp/nf_conntrack_helper
     cat /etc/sysctl.conf >> /tmp/nf_conntrack_helper_systl.conf
     $PUPPET agent --enable
