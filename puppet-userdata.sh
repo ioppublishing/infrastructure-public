@@ -241,8 +241,8 @@ function runpuppet {
     sleep $[ ( $RANDOM % $SPLAYLIMIT ) + 1]s
 
     $PUPPET agent --enable
-    $PUPPET resource service puppet ensure=running enable=true
     $PUPPET agent --onetime --no-daemonize --no-usecacheonfailure --no-splay --debug --show_diff >> /tmp/puppet_log
+    $PUPPET resource service puppet ensure=running enable=true
 }
 
 # Order of execution of functions
