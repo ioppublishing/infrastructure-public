@@ -239,7 +239,11 @@ function associatenode {
 
 function runpuppet {
     sleep $[ ( $RANDOM % $SPLAYLIMIT ) + 1]s
-
+    modprobe nf_conntrack_ftp
+    echo "nf_conntrack_ftp" > /etc/modules-load.d/nf_conntrack_ftp.conf
+    #echo "net.netfilter.nf_conntrack_helper=1" > /etc/sysctl.d/10-nf_conntrack_helper.conf
+    cat /etc/modules-load.d/nf_conntrack_ftp.conf >> /tmp/nf_conntrack_helper
+    #cat /etc/sysctl.conf >> /tmp/nf_conntrack_helper_systl.conf
     $PUPPET agent --enable
     $PUPPET agent --onetime --no-daemonize --no-usecacheonfailure --no-splay --debug --show_diff >> /tmp/puppet_log
     $PUPPET resource service puppet ensure=running enable=true
